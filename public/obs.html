@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <title>OBS Score Overlay</title>
+    <style>
+        /* PENTING untuk OBS */
+        body { background-color: rgba(0, 0, 0, 0); margin: 0; padding: 0; font-family: 'Impact', sans-serif; color: white; text-shadow: 2px 2px 4px #000000; }
+        
+        .overlay-container { width: 400px; padding: 20px; }
+        .table-title { font-size: 2em; text-align: center; color: #ffc107; }
+        .player-score { display: flex; justify-content: space-between; align-items: center; font-size: 3.5em; margin-top: 10px; }
+        .player-name { font-size: 0.6em; }
+    </style>
+</head>
+<body>
+
+<div class="overlay-container">
+    <div id="score-display">
+        </div>
+</div>
+
+<script src="/socket.io/socket.io.js"></script>
+<script>
+    const socket = io();
+    const display = document.getElementById('score-display');
+    const urlParams = new URLSearchParams(window.location.search);
+    const tableId = parseInt(urlParams.get('table')); // Ambil ID meja dari URL, misal: obs.html?table=5
+
+    function renderScore(tableData) {
+        if (tableData) {
+            display.innerHTML = `
+                <div class="table-title">MEJA ${tableData.tableId}</div>
+                <div class="player-score">
+                    <span class="player-name">${tableData.playerA.name}</span>
+                    <span id="score-playerA">${tableData.playerA.score}</span>
+                </div>
+                <div class="player-score">
+                    <span class="player-name">${tableData.playerB.name}</span>
+                    <span id="score-playerB">${tableData.playerB.score}</span>
+                </div>
+            `;
+        } else {
+            display.innerHTML = `<div class="table-title">Pilih meja, misal: ?table=1</div>`;
+        }
+    }
+
+    // Menerima data skor awal
+    socket.on('initialScores', (scores) => {
+        const tableData = scores.find(s => s.tableId === tableId);
+        renderScore(tableData);
+    });
+
+    // Mendengarkan pembaruan skor
+    socket.on('scoreUpdated', (data) => {
+        if (data.tableId === tableId) {
+            const scoreElement = document.getElementById(`score-${data.player}`);
+            if (scoreElement) {
+                scoreElement.innerText = data.score;
+            }
+        }
+    });
+</script>
+</body>
+</html>

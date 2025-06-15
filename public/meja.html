@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Papan Skor Meja Biliar</title>
+    <style>
+        body { font-family: sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; background-color: #f0f0f0; }
+        .scoreboard { text-align: center; padding: 2em; background: white; border-radius: 10px; box-shadow: 0 0 15px rgba(0,0,0,0.2); }
+        .players { display: flex; justify-content: space-around; gap: 3em; margin-top: 1em; }
+        .player { padding: 1em; }
+        .score { font-size: 5em; font-weight: bold; margin: 0.2em 0; }
+        button { font-size: 2em; width: 100px; margin: 5px; cursor: pointer; }
+    </style>
+</head>
+<body>
+
+<div class="scoreboard">
+    <h1 id="table-title">Meja Biliar #?</h1>
+    <div class="players">
+        <div class="player" id="playerA">
+            <h2>Player A</h2>
+            <div class="score" id="scoreA">0</div>
+            <button onclick="changeScore('playerA', 1)">+</button>
+            <button onclick="changeScore('playerA', -1)">-</button>
+        </div>
+        <div class="player" id="playerB">
+            <h2>Player B</h2>
+            <div class="score" id="scoreB">0</div>
+            <button onclick="changeScore('playerB', 1)">+</button>
+            <button onclick="changeScore('playerB', -1)">-</button>
+        </div>
+    </div>
+</div>
+
+<script src="/socket.io/socket.io.js"></script>
+<script>
+    const socket = io();
+    const urlParams = new URLSearchParams(window.location.search);
+    const tableId = parseInt(urlParams.get('id'));
+
+    document.getElementById('table-title').innerText = `Meja Biliar #${tableId}`;
+
+    let currentScores = { playerA: 0, playerB: 0 };
+
+    function changeScore(player, value) {
+        currentScores[player] += value;
+        if (currentScores[player] < 0) currentScores[player] = 0; // Skor tidak boleh minus
+
+        document.getElementById(player === 'playerA' ? 'scoreA' : 'scoreB').innerText = currentScores[player];
+        
+        // Kirim pembaruan ke server
+        socket.emit('updateScore', {
+            tableId: tableId,
+            player: player,
+            score: currentScores[player]
+        });
+    }
+
+    // Menerima data awal saat terhubung
+    socket.on('initialScores', (scores) => {
+        const table = scores.find(s => s.tableId === tableId);
+        if(table) {
+            currentScores.playerA = table.playerA.score;
+            currentScores.playerB = table.playerB.score;
+            document.getElementById('scoreA').innerText = currentScores.playerA;
+            document.getElementById('scoreB').innerText = currentScores.playerB;
+        }
+    });
+
+</script>
+</body>
+</html>

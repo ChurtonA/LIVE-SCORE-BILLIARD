@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <title>Live Score - 16 Meja Biliar</title>
+    <style>
+        body { font-family: sans-serif; background-color: #1a1a1a; color: white; }
+        h1 { text-align: center; }
+        .grid-container { display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; padding: 15px; }
+        .score-card { background-color: #333; border: 1px solid #555; border-radius: 8px; padding: 10px; text-align: center; }
+        .score-card.updated { animation: highlight 1s ease-out; }
+        .table-title { font-size: 1.2em; font-weight: bold; margin-bottom: 10px; color: #ffc107; }
+        .player-score { display: flex; justify-content: space-between; align-items: center; font-size: 2em; }
+        .player-name { font-size: 0.5em; }
+        @keyframes highlight { 0% { background-color: #ffc107; } 100% { background-color: #333; } }
+    </style>
+</head>
+<body>
+
+<h1>Live Score Biliar</h1>
+<div class="grid-container" id="score-grid">
+    </div>
+
+<script src="/socket.io/socket.io.js"></script>
+<script>
+    const socket = io();
+    const scoreGrid = document.getElementById('score-grid');
+
+    // Menerima data skor awal saat halaman dimuat
+    socket.on('initialScores', (scores) => {
+        scoreGrid.innerHTML = ''; // Kosongkan grid
+        scores.forEach(s => {
+            const card = document.createElement('div');
+            card.className = 'score-card';
+            card.id = `table-${s.tableId}`;
+            card.innerHTML = `
+                <div class="table-title">MEJA ${s.tableId}</div>
+                <div class="player-score">
+                    <span>${s.playerA.name}</span>
+                    <span id="score-${s.tableId}-playerA">${s.playerA.score}</span>
+                </div>
+                <div class="player-score">
+                    <span>${s.playerB.name}</span>
+                    <span id="score-${s.tableId}-playerB">${s.playerB.score}</span>
+                </div>
+            `;
+            scoreGrid.appendChild(card);
+        });
+    });
+
+    // Mendengarkan pembaruan skor dari server
+    socket.on('scoreUpdated', (data) => {
+        // data = { tableId: 1, player: 'playerA', score: 5 }
+        const scoreElement = document.getElementById(`score-${data.tableId}-${data.player}`);
+        if (scoreElement) {
+            scoreElement.innerText = data.score;
+            
+            // Tambahkan efek highlight pada card yang diperbarui
+            const card = document.getElementById(`table-${data.tableId}`);
+            card.classList.add('updated');
+            setTimeout(() => {
+                card.classList.remove('updated');
+            }, 1000);
+        }
+    });
+</script>
+</body>
+</html>
